@@ -3,7 +3,7 @@ import time
 import pandas as pd
 from binance.client import Client
 from binance.enums import *
-from binance.streams import ThreadedWebsocketManager
+from binance import BinanceSocketManager
 import strategy as strategy_kadir_v2
 import strategy_scalper
 import database
