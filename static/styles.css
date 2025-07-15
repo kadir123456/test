@@ -1,0 +1,196 @@
+/* static/styles.css */
+
+/* --- Renk Paleti ve Genel Ayarlar (tkinter uygulamasından) --- */
+:root {
+    --color-bg: #282c34;
+    --color-bg-light: #3c4048;
+    --color-fg: #abb2bf;
+    --color-fg-bold: #ffffff;
+    --color-accent: #61afef;
+    --color-success: #98c379;
+    --color-danger: #e06c75;
+    --color-warning: #e5c07b;
+    --font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+    --font-family-monospace: 'Consolas', 'Menlo', 'monospace';
+}
+
+/* --- Genel Sayfa Stilleri --- */
+body {
+    font-family: var(--font-family);
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    margin: 0;
+    padding: 0;
+    font-size: 14px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* --- Başlık (Header) Alanı --- */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--color-bg-light);
+    margin-bottom: 20px;
+}
+
+header h1 {
+    color: var(--color-fg-bold);
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+#status-indicator {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    transition: background-color 0.3s ease;
+}
+
+.status-online {
+    background-color: var(--color-success);
+    box-shadow: 0 0 8px var(--color-success);
+}
+
+.status-offline {
+    background-color: var(--color-danger);
+    box-shadow: 0 0 8px var(--color-danger);
+}
+
+/* --- Ana İçerik Alanı (2 Kolonlu Yapı) --- */
+main {
+    display: flex;
+    gap: 20px;
+}
+
+.left-panel {
+    flex: 0 0 300px; /* Sabit genişlikli sol panel */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.right-panel {
+    flex: 1; /* Geriye kalan tüm alanı kaplayan sağ panel */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* --- Panel Kartları (LabelFrame gibi) --- */
+.card {
+    background-color: var(--color-bg-light);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.card h3 {
+    color: var(--color-accent);
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 16px;
+    border-bottom: 1px solid #555;
+    padding-bottom: 10px;
+}
+
+/* --- Form Elemanları (Butonlar, Girdiler) --- */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 8px 10px;
+    background-color: var(--color-bg);
+    border: 1px solid #555;
+    color: var(--color-fg);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    color: var(--color-fg-bold);
+    cursor: pointer;
+    transition: transform 0.1s ease;
+    text-align: center;
+}
+.btn:hover {
+    filter: brightness(1.1);
+}
+.btn:active {
+    transform: scale(0.98);
+}
+.btn-success { background-color: var(--color-success); color: #000;}
+.btn-warning { background-color: var(--color-warning); color: #000;}
+.btn-danger { background-color: var(--color-danger); }
+.btn-accent { background-color: var(--color-accent); color: #000;}
+
+/* --- Pozisyon ve Log Alanları --- */
+#position-info p {
+    margin: 8px 0;
+    display: flex;
+    justify-content: space-between;
+}
+
+#position-info strong {
+    color: var(--color-fg-bold);
+}
+
+.pnl-success { color: var(--color-success); font-weight: bold; }
+.pnl-danger { color: var(--color-danger); font-weight: bold; }
+
+.log-container {
+    flex-grow: 1;
+}
+
+#log-area {
+    background-color: #1e2127;
+    font-family: var(--font-family-monospace);
+    font-size: 13px;
+    white-space: pre-wrap; /* Satırları kaydır */
+    word-wrap: break-word;
+    height: 400px;
+    overflow-y: auto; /* Dikey scroll bar */
+    border-radius: 4px;
+    padding: 15px;
+    color: var(--color-fg);
+}
+
+/* --- Geçmiş Tablosu --- */
+#history-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#history-table th, #history-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #444;
+}
+
+#history-table th {
+    color: var(--color-accent);
+}
+#history-table td {
+    font-size: 13px;
+}

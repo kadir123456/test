@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-binance
+pandas
+pandas-ta
+psycopg2-binary
+Jinja2
+requests
