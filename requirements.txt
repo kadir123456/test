@@ -6,3 +6,4 @@ pandas-ta
 psycopg2-binary
 Jinja2
 requests
+gunicorn
