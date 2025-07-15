@@ -1,0 +1,34 @@
+def run_strategy(self):
+    self._log("Strateji döngüsü başladı.")
+    while self.strategy_active:
+        try:
+            # Piyasa verisini al
+            df = self._get_market_data(self.active_symbol, self.strategy_configs[self.active_strategy_name]['timeframe'])
+            if df is None:
+                self._log("Market verisi alınamadı, 12 saniye bekleniyor...")
+                time.sleep(12)
+                continue
+            
+            # Strateji sinyalini al
+            signal, atr = self.get_active_strategy_signal(df)
+            
+            if signal:
+                balance = self.get_usdt_balance()
+                quantity = self.calculate_quantity(balance)
+                # Pozisyon yoksa aç
+                if quantity and not self.position_open:
+                    self.open_position(signal, atr, quantity)
+                # Pozisyon açıksa pnl güncelle
+                elif self.position_open:
+                    self.check_and_update_pnl(self.active_symbol)
+            else:
+                self._log("Strateji sinyali yok, pozisyon kapatma kontrolü yapılıyor.")
+                if self.position_open:
+                    self.check_and_update_pnl(self.active_symbol)
+            
+            # İstekler arasında 12 saniye bekle
+            time.sleep(12)
+
+        except Exception as e:
+            self._log(f"Hata oluştu: {e}")
+            time.sleep(12)
