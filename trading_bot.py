@@ -22,8 +22,12 @@ class TradingBot:
         self.position_open: bool = False
         self.ui_update_callback = ui_update_callback
 
-        self.current_position = None  # Pozisyon bilgisi
+        self.current_position = None
+        self.kline_data = None
         self.socket_manager = BinanceSocketManager(self.client)
+
+        self._start_kline_socket(self.active_symbol, self.strategy_configs[self.active_strategy_name]['timeframe'])
+
         threading.Thread(target=self.start_user_data_stream, daemon=True).start()
 
         self._log("Bot objesi oluşturuldu.")
@@ -68,13 +72,35 @@ class TradingBot:
         }
 
     def _log(self, message: str) -> None:
+        log_prefix = time.strftime("[%Y-%m-%d %H:%M:%S]")
+        full_message = f"{log_prefix} {message}"
         if self.ui_update_callback:
-            self.ui_update_callback("log", message)
-        print(message)
+            self.ui_update_callback("log", full_message)
+        print(full_message)
+
+    def _start_kline_socket(self, symbol: str, interval: str):
+        def handle_message(msg):
+            if msg['e'] == 'kline':
+                k = msg['k']
+                df = pd.DataFrame([{
+                    'open_time': k['t'],
+                    'open': float(k['o']),
+                    'high': float(k['h']),
+                    'low': float(k['l']),
+                    'close': float(k['c']),
+                    'volume': float(k['v']),
+                    'close_time': k['T'],
+                }])
+                self.kline_data = df
+
+        self.socket_manager.start_kline_socket(
+            symbol=symbol.lower(),
+            interval=interval,
+            callback=handle_message
+        )
+        self.socket_manager.start()
 
     def start_user_data_stream(self):
-        # Kullanıcı dataları (pozisyon, bakiye vs) için websocket başlatılabilir.
-        # Şu an boş bırakıldı. İstersen websocket ile gerçek zamanlı veri alınabilir.
         pass
 
     def get_usdt_balance(self) -> float:
@@ -91,26 +117,11 @@ class TradingBot:
     def calculate_quantity(self, balance: float) -> Optional[float]:
         if balance <= 0:
             return None
-        quantity = self.quantity_usd / balance * balance  # Basitçe işlem miktarı = quantity_usd olarak ayarlandı
+        quantity = self.quantity_usd / balance * balance
         return quantity
 
     def _get_market_data(self, symbol: str, timeframe: str) -> Optional[pd.DataFrame]:
-        try:
-            klines = self.client.futures_klines(symbol=symbol, interval=timeframe, limit=100)
-            df = pd.DataFrame(klines, columns=[
-                "open_time", "open", "high", "low", "close", "volume",
-                "close_time", "quote_asset_volume", "number_of_trades",
-                "taker_buy_base_asset_volume", "taker_buy_quote_asset_volume", "ignore"
-            ])
-            df['open'] = df['open'].astype(float)
-            df['high'] = df['high'].astype(float)
-            df['low'] = df['low'].astype(float)
-            df['close'] = df['close'].astype(float)
-            df['volume'] = df['volume'].astype(float)
-            return df
-        except Exception as e:
-            self._log(f"Piyasa verisi alınamadı: {e}")
-            return None
+        return self.kline_data
 
     def open_position(self, signal: str, atr: float, quantity: float, manual: bool = False) -> None:
         try:
@@ -141,7 +152,6 @@ class TradingBot:
                 if float(pos['positionAmt']) != 0:
                     pnl = float(pos['unrealizedProfit'])
                     self._log(f"Açık pozisyon PNL: {pnl}")
-                    # UI'yi veya başka yapıyı güncellemek için callback tetiklenebilir
                     return
             self.position_open = False
             self.current_position = None
@@ -236,7 +246,7 @@ class TradingBot:
                 df = self._get_market_data(self.active_symbol, timeframe)
                 if df is None:
                     self._log("Piyasa verisi alınamadı, bekleniyor...")
-                    time.sleep(12)
+                    time.sleep(3)
                     continue
 
                 signal, atr = self.get_active_strategy_signal(df)
@@ -250,11 +260,11 @@ class TradingBot:
                 if self.position_open:
                     self.check_and_update_pnl(self.active_symbol)
 
-                time.sleep(12)  # API limitine uyacak şekilde bekle
+                time.sleep(3)
 
             except Exception as e:
                 self._log(f"Hata oluştu: {e}")
-                time.sleep(12)
+                time.sleep(3)
 
         self._log("Strateji döngüsü durduruldu.")
 
