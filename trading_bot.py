@@ -3,13 +3,12 @@ import time
 import pandas as pd
 from binance.client import Client
 from binance.enums import *
-from binance import BinanceSocketManager
+from binance.streams import ThreadedWebsocketManager
 import strategy as strategy_kadir_v2
 import strategy_scalper
 import database
 import screener
 from typing import Callable, Optional
-from requests.exceptions import RequestException
 import threading
 
 class TradingBot:
@@ -24,8 +23,9 @@ class TradingBot:
 
         self.current_position = None
         self.kline_data = None
-        self.socket_manager = BinanceSocketManager(self.client)
+        self.socket_manager = ThreadedWebsocketManager(api_key=self.api_key, api_secret=self.api_secret)
 
+        self.socket_manager.start()
         self._start_kline_socket(self.active_symbol, self.strategy_configs[self.active_strategy_name]['timeframe'])
 
         threading.Thread(target=self.start_user_data_stream, daemon=True).start()
@@ -93,12 +93,7 @@ class TradingBot:
                 }])
                 self.kline_data = df
 
-        self.socket_manager.start_kline_socket(
-            symbol=symbol.lower(),
-            interval=interval,
-            callback=handle_message
-        )
-        self.socket_manager.start()
+        self.socket_manager.start_kline_socket(callback=handle_message, symbol=symbol, interval=interval)
 
     def start_user_data_stream(self):
         pass
