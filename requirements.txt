@@ -1,5 +1,3 @@
-# requirements.txt (Versiyonları Sabitlenmiş Son Hali)
-
 fastapi
 uvicorn[standard]
 python-binance
@@ -8,8 +6,6 @@ Jinja2
 requests
 gunicorn
 setuptools
-
-# Uyumsuzluk sorununu çözmek için versiyonları sabitliyoruz
-pandas==2.0.3
-numpy==1.24.4
+numpy<2.0
+pandas<2.1
 pandas-ta==0.3.14b
