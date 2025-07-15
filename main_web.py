@@ -1,6 +1,7 @@
 import os
 import asyncio
 import secrets
+import threading
 from typing import List, Dict, Any
 
 from fastapi import (
@@ -20,6 +21,7 @@ from trading_bot import TradingBot
 # --- 1. UYGULAMA VE GÜVENLİK AYARLARI ---
 app = FastAPI(title="KadirV2 Pro Trading Terminal")
 security = HTTPBasic()
+
 APP_USERNAME = os.environ.get("APP_USERNAME")
 APP_PASSWORD = os.environ.get("APP_PASSWORD")
 
@@ -27,37 +29,41 @@ templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 update_queue = asyncio.Queue()
-bot_instance = TradingBot(ui_update_callback=lambda type, data: update_queue.put_nowait({"type": type, "data": data}))
+bot_instance = TradingBot(ui_update_callback=lambda t, d: update_queue.put_nowait({"type": t, "data": d}))
 
 # --- 2. KULLANICI DOĞRULAMA FONKSİYONU ---
 def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
     if not APP_USERNAME or not APP_PASSWORD:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Sunucu tarafında uygulama için giriş bilgileri ayarlanmamış.",
+            detail="Sunucu tarafında kullanıcı adı veya şifre tanımlı değil."
         )
-    is_correct_username = secrets.compare_digest(credentials.username, APP_USERNAME)
-    is_correct_password = secrets.compare_digest(credentials.password, APP_PASSWORD)
+    is_user = secrets.compare_digest(credentials.username, APP_USERNAME)
+    is_pass = secrets.compare_digest(credentials.password, APP_PASSWORD)
     
-    if not (is_correct_username and is_correct_password):
+    if not (is_user and is_pass):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Kullanıcı adı veya şifre yanlış",
-            headers={"WWW-Authenticate": "Basic"},
+            detail="Kullanıcı adı veya şifre yanlış.",
+            headers={"WWW-Authenticate": "Basic"}
         )
     return credentials.username
 
 # --- 3. API İSTEK MODELLERİ ---
 class LeverageRequest(BaseModel):
     leverage: int
+
 class QuantityRequest(BaseModel):
     quantity_usd: float
+
 class SymbolRequest(BaseModel):
     mode: str
     symbol: str = ""
+
 class RiskRequest(BaseModel):
     mode: str
     roi: float
+
 class StrategyRequest(BaseModel):
     strategy_name: str
 
@@ -84,20 +90,16 @@ async def read_root(request: Request, username: str = Depends(authenticate_user)
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    
-    async def queue_listener():
+
+    try:
         while True:
-            try:
-                update = await update_queue.get()
-                await websocket.send_json(update)
-                update_queue.task_done()
-            except Exception:
-                break
+            update = await update_queue.get()
+            await websocket.send_json(update)
+            update_queue.task_done()
+    except Exception:
+        print("WebSocket bağlantısı kapandı.")
 
-    await queue_listener()
-    print("WebSocket bağlantısı kapandı.")
-
-# --- Bot Kontrol API Endpoint'leri ---
+# --- Bot Kontrolleri ---
 @app.post("/start")
 async def start_bot(username: str = Depends(authenticate_user)):
     bot_instance.start_strategy_loop()
@@ -123,12 +125,12 @@ async def manual_trade(side: str, username: str = Depends(authenticate_user)):
     if side.upper() in ["LONG", "SHORT"]:
         threading.Thread(target=bot_instance.manual_trade, args=(side.upper(),), daemon=True).start()
         return {"status": "success"}
-    return {"status": "error", "message": "Geçersiz işlem yönü."}
+    return {"status": "error", "message": "Geçersiz işlem yönü. 'LONG' veya 'SHORT' olmalıdır."}
 
 @app.post("/emergency-close")
 async def emergency_close(username: str = Depends(authenticate_user)):
     threading.Thread(target=bot_instance.close_current_position, args=(True,), daemon=True).start()
-    return {"status": "success"}
+    return {"status": "success", "message": "Acil kapatma emri gönderildi."}
 
 @app.post("/update-symbol")
 async def update_symbol(req: SymbolRequest, username: str = Depends(authenticate_user)):
@@ -153,7 +155,7 @@ async def get_stats(username: str = Depends(authenticate_user)):
 async def get_history(username: str = Depends(authenticate_user)):
     return database.get_all_trades()
 
-# --- 5. UYGULAMAYI ÇALIŞTIRMA ---
+# --- 5. UYGULAMA BAŞLATICI ---
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("main_web:app", host="0.0.0.0", port=port, reload=True)
